@@ -59,6 +59,17 @@ export class BoardRenderer {
       this.isDragging = false;
     });
 
+    // Mouse wheel scroll
+    this.canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      // deltaY > 0 = scroll down = move camera back
+      // deltaY < 0 = scroll up = move camera forward
+      const scrollAmount = e.deltaY * 0.5; // Adjust sensitivity
+      this.cameraOffset += scrollAmount;
+      // Clamp camera offset
+      this.cameraOffset = Math.max(-200, Math.min(200, this.cameraOffset));
+    });
+
     // Keyboard controls
     window.addEventListener("keydown", (e) => {
       if (e.key === "ArrowUp") {
@@ -281,7 +292,7 @@ export class BoardRenderer {
     ctx.font = "9px 'Courier New'";
     ctx.fillStyle = "#6a5a4a";
     ctx.textAlign = "center";
-    ctx.fillText("↑ ↓ or drag to scroll camera", this.canvas.width / 2, this.canvas.height - 10);
+    ctx.fillText("Scroll wheel or ↑ ↓ to pan camera", this.canvas.width / 2, this.canvas.height - 10);
   }
 
   /**
