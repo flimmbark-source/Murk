@@ -19,17 +19,38 @@ A lane-based board game prototype set in a Victorian orphanage where orphans def
 
 ## Quick Start
 
+### Play the Web Version (Recommended)
+
 ```bash
 npm install
-npm run dev
+npm run dev:web
+```
+
+Then open your browser to `http://localhost:3000`
+
+**Features:**
+- Visual card-based graphics with Inscryption-inspired aesthetics
+- Interactive board with click-to-play mechanics
+- Real-time ritual tracking and mana display
+- Atmospheric Victorian dark theme
+- Event log showing game actions
+
+### Play the CLI Version
+
+```bash
+npm install
+npm run dev:cli
 ```
 
 ## Development
 
 ```bash
-npm run build      # Compile TypeScript
-npm run type-check # Type checking without compilation
-npm test           # Run tests
+npm run build         # Compile TypeScript
+npm run build:watch   # Watch mode for development
+npm run type-check    # Type checking without compilation
+npm test              # Run tests
+npm run dev:web       # Run web version
+npm run dev:cli       # Run CLI version
 ```
 
 ## Architecture
@@ -40,4 +61,7 @@ npm test           # Run tests
 - `src/engine/` - Turn controller and game engine
 - `src/cards/` - Card definitions
 - `src/ai/` - CPU behavior
-- `src/ui/` - Interface (CLI for prototype)
+- `src/ui/` - CLI interface
+- `src/client/` - Web graphics renderer and UI
+- `src/server/` - Web server
+- `public/` - HTML, CSS, and static assets

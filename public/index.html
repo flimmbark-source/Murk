@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MURK - Victorian Orphanage Defense</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="game-container">
+    <!-- Header -->
+    <div id="header">
+      <div id="ritual-track">
+        <div class="ritual-bar">
+          <div class="ritual-label">PLAYER RITUAL</div>
+          <div class="ritual-bar-container">
+            <div id="player-ritual-fill" class="ritual-fill player"></div>
+          </div>
+          <div id="player-ritual-text" class="ritual-value">0/10</div>
+        </div>
+        <div class="ritual-bar">
+          <div class="ritual-label">CPU RITUAL</div>
+          <div class="ritual-bar-container">
+            <div id="cpu-ritual-fill" class="ritual-fill cpu"></div>
+          </div>
+          <div id="cpu-ritual-text" class="ritual-value">0/10</div>
+        </div>
+      </div>
+
+      <div id="game-info">
+        <div id="turn-info">Turn <span id="turn-number">1</span></div>
+        <div id="phase-info">Phase: <span id="phase-name">RITUAL</span></div>
+        <div id="mana-info">
+          <span class="mana-label">MANA:</span>
+          <span id="mana-current">1</span>/<span id="mana-max">1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Game Area -->
+    <div id="game-area">
+      <!-- Board Canvas -->
+      <canvas id="board-canvas" width="1200" height="700"></canvas>
+
+      <!-- Lane Order Controls -->
+      <div id="lane-controls">
+        <div class="lane-control" data-lane="0">
+          <div class="lane-label">Lane 0</div>
+          <button class="lane-btn" data-order="advance">ADVANCE</button>
+          <button class="lane-btn" data-order="hold">HOLD</button>
+          <div class="lane-status">NONE</div>
+        </div>
+        <div class="lane-control" data-lane="1">
+          <div class="lane-label">Lane 1</div>
+          <button class="lane-btn" data-order="advance">ADVANCE</button>
+          <button class="lane-btn" data-order="hold">HOLD</button>
+          <div class="lane-status">NONE</div>
+        </div>
+        <div class="lane-control" data-lane="2">
+          <div class="lane-label">Lane 2</div>
+          <button class="lane-btn" data-order="advance">ADVANCE</button>
+          <button class="lane-btn" data-order="hold">HOLD</button>
+          <div class="lane-status">NONE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Hand -->
+    <div id="hand-area">
+      <div id="hand-title">YOUR HAND</div>
+      <div id="hand-cards"></div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div id="action-buttons">
+      <button id="advance-phase-btn" class="action-btn">ADVANCE PHASE</button>
+      <button id="end-turn-btn" class="action-btn">END TURN</button>
+    </div>
+
+    <!-- Event Log -->
+    <div id="event-log">
+      <div class="log-title">EVENT LOG</div>
+      <div id="log-content"></div>
+    </div>
+
+    <!-- Modal for game over -->
+    <div id="game-over-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2 id="winner-text"></h2>
+        <button id="restart-btn" class="action-btn">NEW GAME</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./dist/client/main.js"></script>
+</body>
+</html>
