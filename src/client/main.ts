@@ -29,11 +29,24 @@ class GameClient {
    */
   private start(): void {
     this.engine.start();
+    this.startRenderLoop();
     this.update();
   }
 
   /**
-   * Main update loop
+   * Start continuous render loop for smooth camera
+   */
+  private startRenderLoop(): void {
+    const render = () => {
+      const state = this.engine.getState();
+      this.renderer.render(state);
+      requestAnimationFrame(render);
+    };
+    render();
+  }
+
+  /**
+   * Main update loop (UI updates)
    */
   private update(): void {
     const state = this.engine.getState();
@@ -44,9 +57,6 @@ class GameClient {
     this.updateLaneControls(state);
     this.updateActionButtons(state);
     this.updateEventLog();
-
-    // Render board
-    this.renderer.render(state);
 
     // Check for game over
     if (state.winner) {
@@ -271,6 +281,12 @@ class GameClient {
    * Handle board click
    */
   private handleBoardClick(e: MouseEvent): void {
+    // Don't place cards if user was dragging camera
+    if (this.renderer.wasJustDragging()) {
+      this.renderer.resetDragState();
+      return;
+    }
+
     const state = this.engine.getState();
 
     if (state.currentSide !== "player" || state.phase !== "main" || this.selectedCard === null) {
