@@ -15,9 +15,9 @@ const DEPTH_SPACING_MIN = 30;
 export class BoardRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private cameraOffset: number = 0; // Horizontal camera scroll
+  private cameraOffset: number = 0; // Vertical camera scroll
   private isDragging: boolean = false;
-  private dragStartX: number = 0;
+  private dragStartY: number = 0;
   private dragStartOffset: number = 0;
   private hasDragged: boolean = false;
 
@@ -35,19 +35,19 @@ export class BoardRenderer {
     this.canvas.addEventListener("mousedown", (e) => {
       this.isDragging = true;
       this.hasDragged = false;
-      this.dragStartX = e.clientX;
+      this.dragStartY = e.clientY;
       this.dragStartOffset = this.cameraOffset;
     });
 
     this.canvas.addEventListener("mousemove", (e) => {
       if (this.isDragging) {
-        const dx = e.clientX - this.dragStartX;
-        if (Math.abs(dx) > 5) {
+        const dy = e.clientY - this.dragStartY;
+        if (Math.abs(dy) > 5) {
           this.hasDragged = true;
         }
-        this.cameraOffset = this.dragStartOffset + dx;
+        this.cameraOffset = this.dragStartOffset + dy;
         // Clamp camera offset
-        this.cameraOffset = Math.max(-300, Math.min(300, this.cameraOffset));
+        this.cameraOffset = Math.max(-200, Math.min(200, this.cameraOffset));
       }
     });
 
@@ -61,12 +61,12 @@ export class BoardRenderer {
 
     // Keyboard controls
     window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") {
-        this.cameraOffset += 30;
-        this.cameraOffset = Math.min(300, this.cameraOffset);
-      } else if (e.key === "ArrowRight") {
+      if (e.key === "ArrowUp") {
         this.cameraOffset -= 30;
-        this.cameraOffset = Math.max(-300, this.cameraOffset);
+        this.cameraOffset = Math.max(-200, this.cameraOffset);
+      } else if (e.key === "ArrowDown") {
+        this.cameraOffset += 30;
+        this.cameraOffset = Math.min(200, this.cameraOffset);
       }
     });
   }
@@ -80,7 +80,7 @@ export class BoardRenderer {
   }
 
   /**
-   * Get Y position for a given depth (perspective spacing)
+   * Get Y position for a given depth (perspective spacing with camera offset)
    */
   private getDepthY(depth: Depth): number {
     const baseY = 50;
@@ -93,17 +93,17 @@ export class BoardRenderer {
       y += spacing;
     }
 
-    return y;
+    return y + this.cameraOffset;
   }
 
   /**
-   * Get lane X position with camera offset
+   * Get lane X position
    */
   private getLaneX(lane: LaneIndex, depth: Depth): number {
     const scale = this.getDepthScale(depth);
     const centerX = this.canvas.width / 2;
     const laneOffset = (lane - 1) * LANE_WIDTH_BASE * scale; // -1, 0, 1 for lanes 0, 1, 2
-    return centerX + laneOffset + this.cameraOffset * scale;
+    return centerX + laneOffset;
   }
 
   /**
@@ -281,7 +281,7 @@ export class BoardRenderer {
     ctx.font = "9px 'Courier New'";
     ctx.fillStyle = "#6a5a4a";
     ctx.textAlign = "center";
-    ctx.fillText("← → or drag to pan camera", this.canvas.width / 2, this.canvas.height - 10);
+    ctx.fillText("↑ ↓ or drag to scroll camera", this.canvas.width / 2, this.canvas.height - 10);
   }
 
   /**
