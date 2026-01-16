@@ -5,11 +5,11 @@
 import type { GameState, Piece, LaneIndex, Depth } from "../types/core.js";
 import { getPiece } from "../models/board.js";
 
-const LANE_WIDTH = 380;
-const CELL_HEIGHT = 120;
-const PADDING = 20;
-const CARD_WIDTH = 100;
-const CARD_HEIGHT = 80;
+const LANE_WIDTH = 280;
+const CELL_HEIGHT = 90;
+const PADDING = 30;
+const CARD_WIDTH = 75;
+const CARD_HEIGHT = 60;
 
 export class BoardRenderer {
   private canvas: HTMLCanvasElement;
@@ -77,7 +77,7 @@ export class BoardRenderer {
    */
   private drawDepthLabels(): void {
     const ctx = this.ctx;
-    ctx.font = "bold 14px 'Courier New'";
+    ctx.font = "bold 11px 'Courier New'";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -140,35 +140,35 @@ export class BoardRenderer {
     ctx.strokeRect(x, y, CARD_WIDTH, CARD_HEIGHT);
 
     // Card name
-    ctx.font = "bold 10px 'Courier New'";
+    ctx.font = "bold 8px 'Courier New'";
     ctx.fillStyle = "#d4c5a9";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     const name = this.getCardName(piece.cardId);
-    this.drawWrappedText(ctx, name, x + CARD_WIDTH / 2, y + 5, CARD_WIDTH - 10, 11);
+    this.drawWrappedText(ctx, name, x + CARD_WIDTH / 2, y + 3, CARD_WIDTH - 8, 9);
 
     // Type indicator
-    ctx.font = "8px 'Courier New'";
+    ctx.font = "6px 'Courier New'";
     ctx.fillStyle = "#8a7a5a";
-    ctx.fillText(piece.type === "unit" ? "UNIT" : "ATTK", x + CARD_WIDTH / 2, y + 28);
+    ctx.fillText(piece.type === "unit" ? "UNIT" : "ATTK", x + CARD_WIDTH / 2, y + 20);
 
     // Stats
-    ctx.font = "bold 14px 'Courier New'";
+    ctx.font = "bold 11px 'Courier New'";
 
     // Attack (red)
     ctx.fillStyle = "#c96969";
-    ctx.fillText(`${piece.attack}`, x + 20, y + CARD_HEIGHT - 20);
+    ctx.fillText(`${piece.attack}`, x + 15, y + CARD_HEIGHT - 14);
 
     // Health (green)
     ctx.fillStyle = "#69c969";
-    ctx.fillText(`${piece.health}`, x + CARD_WIDTH - 20, y + CARD_HEIGHT - 20);
+    ctx.fillText(`${piece.health}`, x + CARD_WIDTH - 15, y + CARD_HEIGHT - 14);
 
     // Divider
     ctx.strokeStyle = "#3a2817";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(x + 10, y + CARD_HEIGHT - 30);
-    ctx.lineTo(x + CARD_WIDTH - 10, y + CARD_HEIGHT - 30);
+    ctx.moveTo(x + 8, y + CARD_HEIGHT - 22);
+    ctx.lineTo(x + CARD_WIDTH - 8, y + CARD_HEIGHT - 22);
     ctx.stroke();
   }
 
@@ -183,9 +183,9 @@ export class BoardRenderer {
       if (order === "none") continue;
 
       const x = PADDING + lane * LANE_WIDTH + LANE_WIDTH / 2;
-      const y = this.canvas.height - 30;
+      const y = this.canvas.height - 20;
 
-      ctx.font = "bold 12px 'Courier New'";
+      ctx.font = "bold 10px 'Courier New'";
       ctx.textAlign = "center";
       ctx.fillStyle = order === "advance" ? "#c9a961" : "#8b8b8b";
       ctx.fillText(order.toUpperCase(), x, y);
