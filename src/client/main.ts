@@ -74,8 +74,8 @@ class GameClient {
 
     playerRitualFill.style.width = `${(state.player.ritual / 10) * 100}%`;
     cpuRitualFill.style.width = `${(state.cpu.ritual / 10) * 100}%`;
-    playerRitualText.textContent = `${state.player.ritual}/10`;
-    cpuRitualText.textContent = `${state.cpu.ritual}/10`;
+    playerRitualText.textContent = String(state.player.ritual);
+    cpuRitualText.textContent = String(state.cpu.ritual);
 
     // Turn and phase
     document.getElementById("turn-number")!.textContent = String(state.turn);

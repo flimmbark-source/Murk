@@ -10,29 +10,28 @@
   <div id="game-container">
     <!-- Header -->
     <div id="header">
-      <div id="ritual-track">
-        <div class="ritual-bar">
-          <div class="ritual-label">PLAYER RITUAL</div>
-          <div class="ritual-bar-container">
-            <div id="player-ritual-fill" class="ritual-fill player"></div>
-          </div>
-          <div id="player-ritual-text" class="ritual-value">0/10</div>
-        </div>
-        <div class="ritual-bar">
-          <div class="ritual-label">CPU RITUAL</div>
-          <div class="ritual-bar-container">
-            <div id="cpu-ritual-fill" class="ritual-fill cpu"></div>
-          </div>
-          <div id="cpu-ritual-text" class="ritual-value">0/10</div>
+      <div id="header-left">
+        <div id="turn-info">T<span id="turn-number">1</span></div>
+        <div id="phase-info"><span id="phase-name">RITUAL</span></div>
+        <div id="mana-info">
+          <span id="mana-current">1</span>/<span id="mana-max">1</span>
         </div>
       </div>
 
-      <div id="game-info">
-        <div id="turn-info">Turn <span id="turn-number">1</span></div>
-        <div id="phase-info">Phase: <span id="phase-name">RITUAL</span></div>
-        <div id="mana-info">
-          <span class="mana-label">MANA:</span>
-          <span id="mana-current">1</span>/<span id="mana-max">1</span>
+      <div id="ritual-track">
+        <div class="ritual-bar player-bar">
+          <span class="ritual-label">PLR</span>
+          <div class="ritual-bar-container">
+            <div id="player-ritual-fill" class="ritual-fill"></div>
+          </div>
+          <span id="player-ritual-text" class="ritual-value">0</span>
+        </div>
+        <div class="ritual-bar cpu-bar">
+          <span class="ritual-label">CPU</span>
+          <div class="ritual-bar-container">
+            <div id="cpu-ritual-fill" class="ritual-fill"></div>
+          </div>
+          <span id="cpu-ritual-text" class="ritual-value">0</span>
         </div>
       </div>
     </div>
