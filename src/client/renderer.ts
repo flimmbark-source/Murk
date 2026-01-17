@@ -33,7 +33,7 @@ export class BoardRenderer {
    * Get Y position for a given depth (perspective spacing)
    */
   private getDepthY(depth: Depth): number {
-    const baseY = 50;
+    const baseY = 70; // Adjusted to center board vertically
     let y = baseY;
 
     for (let d = 6; d >= depth; d--) {
@@ -254,13 +254,16 @@ export class BoardRenderer {
    */
   getCellAtPosition(x: number, y: number): { lane: LaneIndex; depth: Depth } | null {
     // Check each depth from front to back
-    for (let depth = 1; depth <= 5; depth++) {
+    for (let depth = 1; depth <= 6; depth++) {
       const depthY = this.getDepthY(depth as Depth);
       const scale = this.getDepthScale(depth as Depth);
       const cardHeight = 60 * scale;
 
+      // Make hit area slightly larger for easier clicking (especially at depth 1)
+      const hitPadding = depth === 1 ? 15 : 5;
+
       // Check if Y is in range
-      if (Math.abs(y - depthY) > cardHeight / 2) {
+      if (Math.abs(y - depthY) > cardHeight / 2 + hitPadding) {
         continue;
       }
 
@@ -269,7 +272,7 @@ export class BoardRenderer {
         const laneX = this.getLaneX(lane as LaneIndex, depth as Depth);
         const cardWidth = 75 * scale;
 
-        if (Math.abs(x - laneX) <= cardWidth / 2) {
+        if (Math.abs(x - laneX) <= cardWidth / 2 + hitPadding) {
           return { lane: lane as LaneIndex, depth: depth as Depth };
         }
       }
