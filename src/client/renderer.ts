@@ -96,31 +96,25 @@ export class BoardRenderer {
    */
   private drawPlacementHighlights(): void {
     const ctx = this.ctx;
-    const depth = 1 as Depth;
-    const scale = this.getDepthScale(depth);
 
-    // Calculate cell boundaries to match grid lines exactly
-    const leftX = this.getLaneX(0, depth) - (LANE_WIDTH_BASE * scale) / 2;
-    const rightX = this.getLaneX(2, depth) + (LANE_WIDTH_BASE * scale) / 2;
-    const cellWidth = (rightX - leftX) / 3;
-
-    // Use actual boundary Y positions
+    // Use EXACT same boundary calculations as the grid
     const topY = this.getDepthBoundaryY(1);
     const bottomY = this.getDepthBoundaryY(0);
-    const cellHeight = bottomY - topY;
 
     // Draw solid yellow outline for each lane segment at depth 1
     ctx.strokeStyle = "#FFD700"; // Gold/yellow color
     ctx.lineWidth = 3;
 
     for (let lane = 0; lane < 3; lane++) {
-      const cellX = leftX + lane * cellWidth;
+      // Use exact same boundary X calculations as the grid
+      const leftX = this.getLaneBoundaryX(lane, 1);
+      const rightX = this.getLaneBoundaryX(lane + 1, 1);
 
       ctx.strokeRect(
-        cellX,
+        leftX,
         topY,
-        cellWidth,
-        cellHeight
+        rightX - leftX,
+        bottomY - topY
       );
     }
   }
@@ -148,6 +142,19 @@ export class BoardRenderer {
   }
 
   /**
+   * Get X position for a vertical lane boundary at a given depth
+   * @param boundaryIndex 0-3 for the 4 vertical boundaries (0=left edge, 3=right edge)
+   * @param depth The depth at which to calculate the X position
+   */
+  private getLaneBoundaryX(boundaryIndex: number, depth: number): number {
+    const scale = depth === 0 || depth === 6
+      ? this.getDepthScale(depth === 0 ? 1 : 6)
+      : (this.getDepthScale(depth as Depth) + this.getDepthScale((depth + 1) as Depth)) / 2;
+    const centerX = this.canvas.width / 2;
+    return centerX + (boundaryIndex - 1.5) * LANE_WIDTH_BASE * scale;
+  }
+
+  /**
    * Draw perspective grid lines
    */
   private drawPerspectiveGrid(): void {
@@ -158,21 +165,8 @@ export class BoardRenderer {
     // Draw horizontal boundary lines that define cells
     for (let depth = 6; depth >= 0; depth--) {
       const y = this.getDepthBoundaryY(depth);
-
-      // Calculate scale at this boundary (interpolate between adjacent depths)
-      let scale: number;
-      if (depth === 0) {
-        scale = this.getDepthScale(1);
-      } else if (depth === 6) {
-        scale = this.getDepthScale(6);
-      } else {
-        const scale1 = this.getDepthScale(depth as Depth);
-        const scale2 = this.getDepthScale((depth + 1) as Depth);
-        scale = (scale1 + scale2) / 2;
-      }
-
-      const leftX = this.canvas.width / 2 - (1.5 * LANE_WIDTH_BASE * scale);
-      const rightX = this.canvas.width / 2 + (1.5 * LANE_WIDTH_BASE * scale);
+      const leftX = this.getLaneBoundaryX(0, depth);
+      const rightX = this.getLaneBoundaryX(3, depth);
 
       ctx.beginPath();
       ctx.moveTo(leftX, y);
@@ -195,17 +189,13 @@ export class BoardRenderer {
     }
 
     // Draw vertical lane boundaries (4 lines defining 3 lanes)
+    // Connect from top boundary (depth 6) to bottom boundary (depth 0)
     for (let i = 0; i <= 3; i++) {
-      const scale1 = this.getDepthScale(6);
-      const scale2 = this.getDepthScale(1);
-      const centerX = this.canvas.width / 2;
-
       ctx.beginPath();
-      // Calculate x position for each boundary at both depths
-      const x1 = centerX + (i - 1.5) * LANE_WIDTH_BASE * scale1;
-      const y1 = this.getDepthY(6);
-      const x2 = centerX + (i - 1.5) * LANE_WIDTH_BASE * scale2;
-      const y2 = this.getDepthY(1);
+      const x1 = this.getLaneBoundaryX(i, 6);
+      const y1 = this.getDepthBoundaryY(6);
+      const x2 = this.getLaneBoundaryX(i, 0);
+      const y2 = this.getDepthBoundaryY(0);
 
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
@@ -346,13 +336,10 @@ export class BoardRenderer {
         continue;
       }
 
-      const scale = this.getDepthScale(depth as Depth);
-
-      // Check each lane using boundary X positions
-      const centerX = this.canvas.width / 2;
+      // Check each lane using exact same boundary X calculations as the grid
       for (let lane = 0; lane < 3; lane++) {
-        const leftX = centerX + (lane - 1.5) * LANE_WIDTH_BASE * scale;
-        const rightX = centerX + (lane - 0.5) * LANE_WIDTH_BASE * scale;
+        const leftX = this.getLaneBoundaryX(lane, depth);
+        const rightX = this.getLaneBoundaryX(lane + 1, depth);
 
         if (x >= leftX && x <= rightX) {
           return { lane: lane as LaneIndex, depth: depth as Depth };
