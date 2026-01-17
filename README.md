@@ -4,7 +4,7 @@ A lane-based board game prototype set in a Victorian orphanage where orphans def
 
 ## Game Overview
 
-- **Board**: 3 lanes × 5 depth spaces
+- **Board**: 3 lanes × 6 depth spaces
 - **Players**: Player vs CPU
 - **Win Condition**: First to reach 10 Ritual wins
 - **Theme**: Victorian orphanage with mundane objects, pets, and weird fish-monster enemies
@@ -21,6 +21,13 @@ A lane-based board game prototype set in a Victorian orphanage where orphans def
 
 ### Play the Web Version (Recommended)
 
+**For Development (with auto-reload):**
+```bash
+npm install
+npm run dev
+```
+
+**For Production:**
 ```bash
 npm install
 npm run dev:web
@@ -30,10 +37,14 @@ Then open your browser to `http://localhost:3000`
 
 **Features:**
 - Visual card-based graphics with Inscryption-inspired aesthetics
-- Interactive board with click-to-play mechanics
+- 3D perspective board view with depth-based scaling
+- Interactive card placement with visual highlights
+- Auto-advancing phases (stops at main phase for player input)
+- Current phase displayed at top of board
 - Real-time ritual tracking and mana display
 - Atmospheric Victorian dark theme
 - Event log showing game actions
+- **Dev mode**: Auto-reload on file changes (use `npm run dev`)
 
 ### Play the CLI Version
 
@@ -45,13 +56,24 @@ npm run dev:cli
 ## Development
 
 ```bash
+npm run dev           # Development mode with auto-reload (recommended)
 npm run build         # Compile TypeScript
-npm run build:watch   # Watch mode for development
+npm run build:watch   # Watch mode for TypeScript compilation
 npm run type-check    # Type checking without compilation
 npm test              # Run tests
-npm run dev:web       # Run web version
+npm run dev:web       # Run web version (no auto-reload)
 npm run dev:cli       # Run CLI version
 ```
+
+### Development Mode
+
+Run `npm run dev` for the best development experience:
+- TypeScript compiler watches for file changes and rebuilds automatically
+- Server automatically restarts when files change
+- Browser automatically reloads when server restarts
+- No need to manually refresh after making code changes
+
+After running `npm run dev`, just open http://localhost:3000 and start coding. When you save changes, the browser will auto-reload within a few seconds.
 
 ## Architecture
 
