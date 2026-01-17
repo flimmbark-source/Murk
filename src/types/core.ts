@@ -9,9 +9,9 @@ export type PieceType = "unit" | "attack";
 export type LaneOrder = "none" | "advance" | "hold";
 
 /**
- * Depth ranges from 1 (player edge) to 5 (CPU edge)
+ * Depth ranges from 1 (player edge) to 6 (CPU edge)
  */
-export type Depth = 1 | 2 | 3 | 4 | 5;
+export type Depth = 1 | 2 | 3 | 4 | 5 | 6;
 
 /**
  * Lane index: 0, 1, or 2 (left, middle, right)
@@ -55,7 +55,7 @@ export interface Piece {
 }
 
 /**
- * Board state - 3 lanes × 5 depths
+ * Board state - 3 lanes × 6 depths
  * Cell can be null (empty) or contain a Piece
  */
 export type Board = (Piece | null)[][];

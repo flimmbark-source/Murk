@@ -12,7 +12,7 @@ import type {
 } from "../types/core.js";
 
 export const LANES = 3;
-export const DEPTHS = 5;
+export const DEPTHS = 6;
 
 /**
  * Create an empty board
@@ -45,7 +45,7 @@ export function setPiece(
  * Check if position is valid
  */
 export function isValidPosition(pos: Position): boolean {
-  return pos.lane >= 0 && pos.lane < LANES && pos.depth >= 1 && pos.depth <= 5;
+  return pos.lane >= 0 && pos.lane < LANES && pos.depth >= 1 && pos.depth <= 6;
 }
 
 /**
@@ -93,10 +93,10 @@ export function isPlayerSide(depth: Depth): boolean {
 }
 
 /**
- * Check if position is on the CPU side (depths 4-5)
+ * Check if position is on the CPU side (depths 5-6)
  */
 export function isCpuSide(depth: Depth): boolean {
-  return depth >= 4;
+  return depth >= 5;
 }
 
 /**
@@ -105,7 +105,7 @@ export function isCpuSide(depth: Depth): boolean {
 export function getNextPosition(pos: Position, side: Side): Position | null {
   const nextDepth = side === "player" ? pos.depth + 1 : pos.depth - 1;
 
-  if (nextDepth < 1 || nextDepth > 5) {
+  if (nextDepth < 1 || nextDepth > 6) {
     return null; // Would go off board (breakthrough)
   }
 
@@ -145,12 +145,12 @@ export function removePiece(board: Board, pos: Position): void {
  * Get deployment depth for a side
  */
 export function getDeployDepth(side: Side): Depth {
-  return side === "player" ? 1 : 5;
+  return side === "player" ? 1 : 6;
 }
 
 /**
  * Find all pieces on opponent's side (for ritual scoring)
- * Player side = depths 1-2, CPU side = depths 4-5
+ * Player side = depths 1-2, CPU side = depths 5-6
  */
 export function getPiecesOnOpponentSide(
   board: Board,
@@ -167,7 +167,7 @@ export function getPiecesOnOpponentSide(
         continue;
       }
 
-      // Player scores for being on CPU side (depths 4-5)
+      // Player scores for being on CPU side (depths 5-6)
       // CPU scores for being on player side (depths 1-2)
       const isOnOpponentSide = targetSide === "cpu" ? isCpuSide(depth as Depth) : isPlayerSide(depth as Depth);
 

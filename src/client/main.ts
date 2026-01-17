@@ -281,12 +281,6 @@ class GameClient {
    * Handle board click
    */
   private handleBoardClick(e: MouseEvent): void {
-    // Don't place cards if user was dragging camera
-    if (this.renderer.wasJustDragging()) {
-      this.renderer.resetDragState();
-      return;
-    }
-
     const state = this.engine.getState();
 
     if (state.currentSide !== "player" || state.phase !== "main" || this.selectedCard === null) {

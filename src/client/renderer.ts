@@ -15,96 +15,35 @@ const DEPTH_SPACING_MIN = 30;
 export class BoardRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private cameraOffset: number = 0; // Vertical camera scroll
-  private isDragging: boolean = false;
-  private dragStartY: number = 0;
-  private dragStartOffset: number = 0;
-  private hasDragged: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
-    this.setupControls();
-  }
-
-  /**
-   * Setup camera controls
-   */
-  private setupControls(): void {
-    // Mouse drag
-    this.canvas.addEventListener("mousedown", (e) => {
-      this.isDragging = true;
-      this.hasDragged = false;
-      this.dragStartY = e.clientY;
-      this.dragStartOffset = this.cameraOffset;
-    });
-
-    this.canvas.addEventListener("mousemove", (e) => {
-      if (this.isDragging) {
-        const dy = e.clientY - this.dragStartY;
-        if (Math.abs(dy) > 5) {
-          this.hasDragged = true;
-        }
-        this.cameraOffset = this.dragStartOffset + dy;
-        // Clamp camera offset
-        this.cameraOffset = Math.max(-200, Math.min(200, this.cameraOffset));
-      }
-    });
-
-    this.canvas.addEventListener("mouseup", () => {
-      this.isDragging = false;
-    });
-
-    this.canvas.addEventListener("mouseleave", () => {
-      this.isDragging = false;
-    });
-
-    // Mouse wheel scroll
-    this.canvas.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      // deltaY > 0 = scroll down = move camera back
-      // deltaY < 0 = scroll up = move camera forward
-      const scrollAmount = e.deltaY * 0.5; // Adjust sensitivity
-      this.cameraOffset += scrollAmount;
-      // Clamp camera offset
-      this.cameraOffset = Math.max(-200, Math.min(200, this.cameraOffset));
-    });
-
-    // Keyboard controls
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowUp") {
-        this.cameraOffset -= 30;
-        this.cameraOffset = Math.max(-200, this.cameraOffset);
-      } else if (e.key === "ArrowDown") {
-        this.cameraOffset += 30;
-        this.cameraOffset = Math.min(200, this.cameraOffset);
-      }
-    });
   }
 
   /**
    * Get perspective scale for a given depth
    */
   private getDepthScale(depth: Depth): number {
-    const t = (5 - depth) / 4; // 0 at depth 5, 1 at depth 1
+    const t = (6 - depth) / 5; // 0 at depth 6, 1 at depth 1
     return PERSPECTIVE_SCALE_MIN + (PERSPECTIVE_SCALE_MAX - PERSPECTIVE_SCALE_MIN) * t;
   }
 
   /**
-   * Get Y position for a given depth (perspective spacing with camera offset)
+   * Get Y position for a given depth (perspective spacing)
    */
   private getDepthY(depth: Depth): number {
     const baseY = 50;
     let y = baseY;
 
-    for (let d = 5; d >= depth; d--) {
-      if (d === 5) continue;
+    for (let d = 6; d >= depth; d--) {
+      if (d === 6) continue;
       const scale = this.getDepthScale(d as Depth);
       const spacing = DEPTH_SPACING_MIN + (DEPTH_SPACING_BASE - DEPTH_SPACING_MIN) * scale;
       y += spacing;
     }
 
-    return y + this.cameraOffset;
+    return y;
   }
 
   /**
@@ -126,13 +65,10 @@ export class BoardRenderer {
     // Draw perspective grid
     this.drawPerspectiveGrid();
 
-    // Draw pieces from back to front (depth 5 to 1)
-    for (let depth = 5; depth >= 1; depth--) {
+    // Draw pieces from back to front (depth 6 to 1)
+    for (let depth = 6; depth >= 1; depth--) {
       this.drawDepthRow(state, depth as Depth);
     }
-
-    // Draw camera controls hint
-    this.drawCameraHint();
   }
 
   /**
@@ -144,7 +80,7 @@ export class BoardRenderer {
     ctx.lineWidth = 2;
 
     // Draw horizontal depth lines
-    for (let depth = 5; depth >= 1; depth--) {
+    for (let depth = 6; depth >= 1; depth--) {
       const y = this.getDepthY(depth as Depth);
       const scale = this.getDepthScale(depth as Depth);
 
@@ -160,16 +96,16 @@ export class BoardRenderer {
       ctx.font = `bold ${9 + scale * 3}px 'Courier New'`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = depth === 5 || depth === 1 ? "#c96969" : "#6a5a4a";
-      const label = depth === 5 ? "CPU" : depth === 1 ? "PLR" : String(depth);
+      ctx.fillStyle = depth === 6 || depth === 1 ? "#c96969" : "#6a5a4a";
+      const label = depth === 6 ? "CPU" : depth === 1 ? "PLR" : String(depth);
       ctx.fillText(label, leftX - 30, y);
     }
 
     // Draw vertical lane dividers
     for (let lane = 0; lane < 3; lane++) {
       ctx.beginPath();
-      const x1 = this.getLaneX(lane as LaneIndex, 5);
-      const y1 = this.getDepthY(5);
+      const x1 = this.getLaneX(lane as LaneIndex, 6);
+      const y1 = this.getDepthY(6);
       const x2 = this.getLaneX(lane as LaneIndex, 1);
       const y2 = this.getDepthY(1);
 
@@ -180,12 +116,12 @@ export class BoardRenderer {
 
     // Draw lane right borders
     for (let lane = 0; lane < 3; lane++) {
-      const scale1 = this.getDepthScale(5);
+      const scale1 = this.getDepthScale(6);
       const scale2 = this.getDepthScale(1);
 
       ctx.beginPath();
-      const x1 = this.getLaneX(lane as LaneIndex, 5) + (LANE_WIDTH_BASE * scale1) / 2;
-      const y1 = this.getDepthY(5);
+      const x1 = this.getLaneX(lane as LaneIndex, 6) + (LANE_WIDTH_BASE * scale1) / 2;
+      const y1 = this.getDepthY(6);
       const x2 = this.getLaneX(lane as LaneIndex, 1) + (LANE_WIDTH_BASE * scale2) / 2;
       const y2 = this.getDepthY(1);
 
@@ -285,17 +221,6 @@ export class BoardRenderer {
   }
 
   /**
-   * Draw camera control hint
-   */
-  private drawCameraHint(): void {
-    const ctx = this.ctx;
-    ctx.font = "9px 'Courier New'";
-    ctx.fillStyle = "#6a5a4a";
-    ctx.textAlign = "center";
-    ctx.fillText("Scroll wheel or ↑ ↓ to pan camera", this.canvas.width / 2, this.canvas.height - 10);
-  }
-
-  /**
    * Get card name from ID
    */
   private getCardName(cardId: string): string {
@@ -351,26 +276,5 @@ export class BoardRenderer {
     }
 
     return null;
-  }
-
-  /**
-   * Reset camera
-   */
-  resetCamera(): void {
-    this.cameraOffset = 0;
-  }
-
-  /**
-   * Check if user just dragged (to avoid click after drag)
-   */
-  wasJustDragging(): boolean {
-    return this.hasDragged;
-  }
-
-  /**
-   * Reset drag state
-   */
-  resetDragState(): void {
-    this.hasDragged = false;
   }
 }
