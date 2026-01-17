@@ -34,12 +34,12 @@ class GameClient {
   }
 
   /**
-   * Start continuous render loop for smooth camera
+   * Start continuous render loop for smooth rendering
    */
   private startRenderLoop(): void {
     const render = () => {
       const state = this.engine.getState();
-      this.renderer.render(state);
+      this.renderer.render(state, this.selectedCard);
       requestAnimationFrame(render);
     };
     render();
@@ -283,17 +283,20 @@ class GameClient {
   private handleBoardClick(e: MouseEvent): void {
     const state = this.engine.getState();
 
-    if (state.currentSide !== "player" || state.phase !== "main" || this.selectedCard === null) {
-      return;
-    }
-
     const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
     const cell = this.renderer.getCellAtPosition(x, y);
+    console.log("Board click:", { x, y, cell, selectedCard: this.selectedCard, phase: state.phase, side: state.currentSide });
+
+    if (state.currentSide !== "player" || state.phase !== "main" || this.selectedCard === null) {
+      console.log("Cannot place card - not player's main phase or no card selected");
+      return;
+    }
 
     if (cell && cell.depth === 1) {
+      console.log("Attempting to place card at lane", cell.lane);
       // Try to play card
       const success = this.engine.processAction({
         type: "play_card",
@@ -301,11 +304,15 @@ class GameClient {
         lane: cell.lane,
       });
 
+      console.log("Card placement success:", success);
+
       if (success) {
         this.selectedCard = null;
       }
 
       this.update();
+    } else {
+      console.log("Click not at depth 1 or no cell detected");
     }
   }
 }

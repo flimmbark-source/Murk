@@ -59,15 +59,48 @@ export class BoardRenderer {
   /**
    * Render the complete board
    */
-  render(state: GameState): void {
+  render(state: GameState, selectedCard: number | null = null): void {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Draw perspective grid
     this.drawPerspectiveGrid();
 
+    // Draw placement highlights if card is selected
+    if (selectedCard !== null && state.currentSide === "player" && state.phase === "main") {
+      this.drawPlacementHighlights();
+    }
+
     // Draw pieces from back to front (depth 6 to 1)
     for (let depth = 6; depth >= 1; depth--) {
       this.drawDepthRow(state, depth as Depth);
+    }
+  }
+
+  /**
+   * Draw placement highlights for depth 1 when card is selected
+   */
+  private drawPlacementHighlights(): void {
+    const ctx = this.ctx;
+    const depth = 1 as Depth;
+    const scale = this.getDepthScale(depth);
+    const cardWidth = 75 * scale;
+    const cardHeight = 60 * scale;
+    const y = this.getDepthY(depth);
+
+    // Draw yellow outline for each lane at depth 1
+    for (let lane = 0; lane < 3; lane++) {
+      const x = this.getLaneX(lane as LaneIndex, depth);
+
+      ctx.strokeStyle = "#FFD700"; // Gold/yellow color
+      ctx.lineWidth = 3;
+      ctx.setLineDash([5, 5]); // Dashed line
+      ctx.strokeRect(
+        x - cardWidth / 2,
+        y - cardHeight / 2,
+        cardWidth,
+        cardHeight
+      );
+      ctx.setLineDash([]); // Reset to solid line
     }
   }
 
