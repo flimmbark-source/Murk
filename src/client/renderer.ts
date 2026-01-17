@@ -98,13 +98,16 @@ export class BoardRenderer {
     const ctx = this.ctx;
     const depth = 1 as Depth;
     const scale = this.getDepthScale(depth);
-    const y = this.getDepthY(depth);
 
     // Calculate cell boundaries to match grid lines exactly
     const leftX = this.getLaneX(0, depth) - (LANE_WIDTH_BASE * scale) / 2;
     const rightX = this.getLaneX(2, depth) + (LANE_WIDTH_BASE * scale) / 2;
     const cellWidth = (rightX - leftX) / 3;
-    const cardHeight = 60 * scale;
+
+    // Use actual boundary Y positions
+    const topY = this.getDepthBoundaryY(1);
+    const bottomY = this.getDepthBoundaryY(0);
+    const cellHeight = bottomY - topY;
 
     // Draw solid yellow outline for each lane segment at depth 1
     ctx.strokeStyle = "#FFD700"; // Gold/yellow color
@@ -115,10 +118,32 @@ export class BoardRenderer {
 
       ctx.strokeRect(
         cellX,
-        y - cardHeight / 2,
+        topY,
         cellWidth,
-        cardHeight
+        cellHeight
       );
+    }
+  }
+
+  /**
+   * Get Y position for boundary between two depths
+   */
+  private getDepthBoundaryY(depth: number): number {
+    if (depth === 0) {
+      // Bottom edge - extend below depth 1
+      const y1 = this.getDepthY(1);
+      const y2 = this.getDepthY(2);
+      return y1 + (y1 - y2) / 2;
+    } else if (depth === 6) {
+      // Top edge - extend above depth 6
+      const y6 = this.getDepthY(6);
+      const y5 = this.getDepthY(5);
+      return y6 - (y5 - y6) / 2;
+    } else {
+      // Midpoint between adjacent depths
+      const y1 = this.getDepthY(depth as Depth);
+      const y2 = this.getDepthY((depth + 1) as Depth);
+      return (y1 + y2) / 2;
     }
   }
 
@@ -130,20 +155,37 @@ export class BoardRenderer {
     ctx.strokeStyle = "#3a2817";
     ctx.lineWidth = 2;
 
-    // Draw horizontal depth lines
-    for (let depth = 6; depth >= 1; depth--) {
-      const y = this.getDepthY(depth as Depth);
-      const scale = this.getDepthScale(depth as Depth);
+    // Draw horizontal boundary lines that define cells
+    for (let depth = 6; depth >= 0; depth--) {
+      const y = this.getDepthBoundaryY(depth);
 
-      const leftX = this.getLaneX(0, depth as Depth) - (LANE_WIDTH_BASE * scale) / 2;
-      const rightX = this.getLaneX(2, depth as Depth) + (LANE_WIDTH_BASE * scale) / 2;
+      // Calculate scale at this boundary (interpolate between adjacent depths)
+      let scale: number;
+      if (depth === 0) {
+        scale = this.getDepthScale(1);
+      } else if (depth === 6) {
+        scale = this.getDepthScale(6);
+      } else {
+        const scale1 = this.getDepthScale(depth as Depth);
+        const scale2 = this.getDepthScale((depth + 1) as Depth);
+        scale = (scale1 + scale2) / 2;
+      }
+
+      const leftX = this.canvas.width / 2 - (1.5 * LANE_WIDTH_BASE * scale);
+      const rightX = this.canvas.width / 2 + (1.5 * LANE_WIDTH_BASE * scale);
 
       ctx.beginPath();
       ctx.moveTo(leftX, y);
       ctx.lineTo(rightX, y);
       ctx.stroke();
+    }
 
-      // Draw depth label
+    // Draw depth labels at center of each cell
+    for (let depth = 6; depth >= 1; depth--) {
+      const y = this.getDepthY(depth as Depth);
+      const scale = this.getDepthScale(depth as Depth);
+      const leftX = this.canvas.width / 2 - (1.5 * LANE_WIDTH_BASE * scale);
+
       ctx.font = `bold ${9 + scale * 3}px 'Courier New'`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -295,24 +337,24 @@ export class BoardRenderer {
   getCellAtPosition(x: number, y: number): { lane: LaneIndex; depth: Depth } | null {
     // Check each depth from front to back
     for (let depth = 1; depth <= 6; depth++) {
-      const depthY = this.getDepthY(depth as Depth);
-      const scale = this.getDepthScale(depth as Depth);
-      const cardHeight = 60 * scale;
-
-      // Make hit area slightly larger for easier clicking (especially at depth 1)
-      const hitPadding = depth === 1 ? 15 : 5;
+      // Use actual boundary Y positions to define cell area
+      const topY = this.getDepthBoundaryY(depth);
+      const bottomY = this.getDepthBoundaryY(depth - 1);
 
       // Check if Y is in range
-      if (Math.abs(y - depthY) > cardHeight / 2 + hitPadding) {
+      if (y < topY || y > bottomY) {
         continue;
       }
 
-      // Check each lane
-      for (let lane = 0; lane < 3; lane++) {
-        const laneX = this.getLaneX(lane as LaneIndex, depth as Depth);
-        const cardWidth = 75 * scale;
+      const scale = this.getDepthScale(depth as Depth);
 
-        if (Math.abs(x - laneX) <= cardWidth / 2 + hitPadding) {
+      // Check each lane using boundary X positions
+      const centerX = this.canvas.width / 2;
+      for (let lane = 0; lane < 3; lane++) {
+        const leftX = centerX + (lane - 1.5) * LANE_WIDTH_BASE * scale;
+        const rightX = centerX + (lane - 0.5) * LANE_WIDTH_BASE * scale;
+
+        if (x >= leftX && x <= rightX) {
           return { lane: lane as LaneIndex, depth: depth as Depth };
         }
       }
