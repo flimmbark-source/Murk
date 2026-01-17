@@ -152,28 +152,17 @@ export class BoardRenderer {
       ctx.fillText(label, leftX - 30, y);
     }
 
-    // Draw vertical lane dividers
-    for (let lane = 0; lane < 3; lane++) {
-      ctx.beginPath();
-      const x1 = this.getLaneX(lane as LaneIndex, 6);
-      const y1 = this.getDepthY(6);
-      const x2 = this.getLaneX(lane as LaneIndex, 1);
-      const y2 = this.getDepthY(1);
-
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-    }
-
-    // Draw lane right borders
-    for (let lane = 0; lane < 3; lane++) {
+    // Draw vertical lane boundaries (4 lines defining 3 lanes)
+    for (let i = 0; i <= 3; i++) {
       const scale1 = this.getDepthScale(6);
       const scale2 = this.getDepthScale(1);
+      const centerX = this.canvas.width / 2;
 
       ctx.beginPath();
-      const x1 = this.getLaneX(lane as LaneIndex, 6) + (LANE_WIDTH_BASE * scale1) / 2;
+      // Calculate x position for each boundary at both depths
+      const x1 = centerX + (i - 1.5) * LANE_WIDTH_BASE * scale1;
       const y1 = this.getDepthY(6);
-      const x2 = this.getLaneX(lane as LaneIndex, 1) + (LANE_WIDTH_BASE * scale2) / 2;
+      const x2 = centerX + (i - 1.5) * LANE_WIDTH_BASE * scale2;
       const y2 = this.getDepthY(1);
 
       ctx.moveTo(x1, y1);

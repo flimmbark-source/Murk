@@ -11,6 +11,7 @@ class GameClient {
   private engine: GameEngine;
   private renderer: BoardRenderer;
   private selectedCard: number | null = null;
+  private autoAdvanceTimeout: number | null = null;
 
   constructor() {
     const playerDeck = buildPlayerDeck();
@@ -64,9 +65,16 @@ class GameClient {
       return;
     }
 
+    // Clear any pending auto-advance timeout
+    if (this.autoAdvanceTimeout !== null) {
+      clearTimeout(this.autoAdvanceTimeout);
+      this.autoAdvanceTimeout = null;
+    }
+
     // Auto-advance CPU turns
     if (state.currentSide === "cpu") {
-      setTimeout(() => {
+      this.autoAdvanceTimeout = window.setTimeout(() => {
+        this.autoAdvanceTimeout = null;
         this.engine.processAction({ type: "advance_phase" });
         this.update();
       }, 1000);
@@ -76,7 +84,8 @@ class GameClient {
     // Auto-advance non-main phases for player
     if (state.currentSide === "player" && state.phase !== "main") {
       const delay = state.phase === "ritual" ? 1500 : 2000;
-      setTimeout(() => {
+      this.autoAdvanceTimeout = window.setTimeout(() => {
+        this.autoAdvanceTimeout = null;
         this.engine.processAction({ type: "advance_phase" });
         this.update();
       }, delay);
