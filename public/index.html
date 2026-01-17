@@ -50,27 +50,12 @@
 
     <!-- Lane Order Controls -->
     <div id="lane-order-controls">
-      <div class="lane-order-title">LANE ORDERS</div>
-      <div class="lane-order-list">
-        <div class="lane-order-item" data-lane="0">
-          <span class="lane-order-label">L0:</span>
-          <button class="lane-order-btn" data-order="advance">ADV</button>
-          <button class="lane-order-btn" data-order="hold">HOLD</button>
-          <span class="lane-order-status">NONE</span>
-        </div>
-        <div class="lane-order-item" data-lane="1">
-          <span class="lane-order-label">L1:</span>
-          <button class="lane-order-btn" data-order="advance">ADV</button>
-          <button class="lane-order-btn" data-order="hold">HOLD</button>
-          <span class="lane-order-status">NONE</span>
-        </div>
-        <div class="lane-order-item" data-lane="2">
-          <span class="lane-order-label">L2:</span>
-          <button class="lane-order-btn" data-order="advance">ADV</button>
-          <button class="lane-order-btn" data-order="hold">HOLD</button>
-          <span class="lane-order-status">NONE</span>
-        </div>
+      <div class="lane-order-title">ALL LANES</div>
+      <div class="lane-order-buttons">
+        <button id="advance-all-btn" class="lane-order-btn">ADVANCE</button>
+        <button id="hold-all-btn" class="lane-order-btn">HOLD</button>
       </div>
+      <div id="lane-order-status">NONE</div>
     </div>
 
     <!-- Action Buttons -->

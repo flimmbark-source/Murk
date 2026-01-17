@@ -188,28 +188,60 @@ class GameClient {
   }
 
   /**
+   * Set lane order for first available lane
+   */
+  private setLaneOrder(order: "advance" | "hold"): void {
+    const state = this.engine.getState();
+
+    // Find first lane with player pieces, or default to lane 0
+    let targetLane: LaneIndex = 0;
+
+    for (let lane = 0; lane < 3; lane++) {
+      const laneIndex = lane as LaneIndex;
+      const hasPlayerPieces = Object.values(state.board).some((piece: any) =>
+        piece && piece.position.lane === laneIndex && piece.side === "player"
+      );
+
+      if (hasPlayerPieces) {
+        targetLane = laneIndex;
+        break;
+      }
+    }
+
+    this.engine.processAction({ type: "set_lane_order", lane: targetLane, order });
+    this.update();
+  }
+
+  /**
    * Update lane controls
    */
   private updateLaneControls(state: any): void {
     const isMainPhase = state.phase === "main" && state.currentSide === "player";
 
-    document.querySelectorAll(".lane-order-item").forEach((item) => {
-      const laneIndex = parseInt(item.getAttribute("data-lane")!);
-      const laneState = state.lanes[laneIndex];
-      const statusEl = item.querySelector(".lane-order-status")!;
+    // Check if any lane has an order set
+    const activeLane = state.lanes.find((lane: any) => lane.order !== "none");
+    const statusEl = document.getElementById("lane-order-status")!;
 
-      statusEl.textContent = laneState.order.toUpperCase();
-      if (laneState.order !== "none") {
-        statusEl.classList.add("active");
-      } else {
-        statusEl.classList.remove("active");
-      }
+    if (activeLane) {
+      statusEl.textContent = activeLane.order.toUpperCase();
+      statusEl.classList.add("active");
+    } else {
+      statusEl.textContent = "NONE";
+      statusEl.classList.remove("active");
+    }
 
-      // Enable/disable buttons
-      item.querySelectorAll(".lane-order-btn").forEach((btn) => {
-        (btn as HTMLButtonElement).disabled = !isMainPhase;
-      });
-    });
+    // Enable/disable buttons
+    const hasOrder = activeLane !== undefined;
+    document.getElementById("advance-all-btn")!.setAttribute("disabled", (!isMainPhase || hasOrder).toString());
+    document.getElementById("hold-all-btn")!.setAttribute("disabled", (!isMainPhase || hasOrder).toString());
+
+    if (!isMainPhase || hasOrder) {
+      (document.getElementById("advance-all-btn") as HTMLButtonElement).disabled = true;
+      (document.getElementById("hold-all-btn") as HTMLButtonElement).disabled = true;
+    } else {
+      (document.getElementById("advance-all-btn") as HTMLButtonElement).disabled = false;
+      (document.getElementById("hold-all-btn") as HTMLButtonElement).disabled = false;
+    }
   }
 
   /**
@@ -245,11 +277,62 @@ class GameClient {
 
       entry.textContent = `• ${event.message}`;
       logContent.insertBefore(entry, logContent.firstChild);
+
+      // Create floating numbers for relevant events
+      this.processEventForAnimations(event);
     });
 
     // Keep log size manageable
     while (logContent.children.length > 50) {
       logContent.removeChild(logContent.lastChild!);
+    }
+  }
+
+  /**
+   * Process event and create floating number animations
+   */
+  private processEventForAnimations(event: any): void {
+    if (!event.data) return;
+
+    // Combat damage
+    if (event.type === "combat" && event.data.damage !== undefined) {
+      const piece = event.data.target || event.data.attacker;
+      if (piece && piece.position) {
+        this.renderer.addFloatingNumber(
+          `-${event.data.damage}`,
+          piece.position.lane,
+          piece.position.depth,
+          "#ff4444"
+        );
+      }
+    }
+
+    // Ritual gains
+    if (event.type === "ritual_phase" || event.message.includes("ritual")) {
+      const state = this.engine.getState();
+      // Show ritual gains for pieces
+      Object.values(state.board).forEach((piece: any) => {
+        if (piece && piece.type === "unit") {
+          const ritualGain = 1; // Units contribute 1 ritual
+          this.renderer.addFloatingNumber(
+            `+${ritualGain} ⚗`,
+            piece.position.lane,
+            piece.position.depth,
+            "#9b59d6"
+          );
+        }
+      });
+    }
+
+    // Breakthrough damage
+    if (event.type === "breakthrough" && event.data.damage !== undefined) {
+      // Show at the far edge of the lane
+      this.renderer.addFloatingNumber(
+        `-${event.data.damage}`,
+        event.data.lane,
+        event.data.side === "player" ? 6 : 1,
+        "#ff6644"
+      );
     }
   }
 
@@ -272,17 +355,13 @@ class GameClient {
     const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
     canvas.addEventListener("click", (e) => this.handleBoardClick(e));
 
-    // Lane order buttons
-    document.querySelectorAll(".lane-order-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        const target = e.target as HTMLElement;
-        const laneItem = target.closest(".lane-order-item")!;
-        const lane = parseInt(laneItem.getAttribute("data-lane")!) as LaneIndex;
-        const order = target.getAttribute("data-order") as "advance" | "hold";
+    // Lane order buttons - Apply to first available lane
+    document.getElementById("advance-all-btn")!.addEventListener("click", () => {
+      this.setLaneOrder("advance");
+    });
 
-        this.engine.processAction({ type: "set_lane_order", lane, order });
-        this.update();
-      });
+    document.getElementById("hold-all-btn")!.addEventListener("click", () => {
+      this.setLaneOrder("hold");
     });
 
     // Action buttons
@@ -330,6 +409,7 @@ class GameClient {
 
     if (!cell) {
       console.log("No cell detected");
+      this.hideCardDetailsPopup();
       return;
     }
 
@@ -338,8 +418,12 @@ class GameClient {
     if (piece) {
       // Show card details popup
       this.showCardDetailsPopup(piece);
+      e.stopPropagation(); // Prevent document click handler from closing it
       return;
     }
+
+    // Close popup if clicking empty cell
+    this.hideCardDetailsPopup();
 
     // Try to place card
     if (state.currentSide !== "player" || state.phase !== "main" || this.selectedCard === null) {

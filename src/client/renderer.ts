@@ -12,13 +12,25 @@ const PERSPECTIVE_SCALE_MAX = 1.0; // Scale at depth 1 (player edge)
 const DEPTH_SPACING_BASE = 80;
 const DEPTH_SPACING_MIN = 30;
 
+interface FloatingNumber {
+  value: string;
+  x: number;
+  y: number;
+  lifetime: number;
+  maxLifetime: number;
+  color: string;
+}
+
 export class BoardRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+  private floatingNumbers: FloatingNumber[] = [];
+  private lastFrameTime: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+    this.startAnimationLoop();
   }
 
   /**
@@ -77,6 +89,9 @@ export class BoardRenderer {
     for (let depth = 6; depth >= 1; depth--) {
       this.drawDepthRow(state, depth as Depth);
     }
+
+    // Draw floating numbers on top of everything
+    this.renderFloatingNumbers();
   }
 
   /**
@@ -355,5 +370,93 @@ export class BoardRenderer {
     }
 
     return null;
+  }
+
+  /**
+   * Add a floating number animation
+   */
+  addFloatingNumber(value: string, lane: LaneIndex, depth: Depth, color: string): void {
+    const x = this.getLaneX(lane, depth);
+    const y = this.getDepthY(depth);
+
+    this.floatingNumbers.push({
+      value,
+      x,
+      y,
+      lifetime: 0,
+      maxLifetime: 2000, // 2 seconds
+      color,
+    });
+  }
+
+  /**
+   * Update floating numbers
+   */
+  private updateFloatingNumbers(deltaTime: number): void {
+    this.floatingNumbers = this.floatingNumbers.filter((num) => {
+      num.lifetime += deltaTime;
+      return num.lifetime < num.maxLifetime;
+    });
+  }
+
+  /**
+   * Render floating numbers
+   */
+  private renderFloatingNumbers(): void {
+    const ctx = this.ctx;
+
+    for (const num of this.floatingNumbers) {
+      const progress = num.lifetime / num.maxLifetime;
+      const yOffset = -progress * 60; // Rise 60 pixels
+      const opacity = 1 - progress; // Fade out
+
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.font = "bold 20px 'Courier New'";
+      ctx.fillStyle = num.color;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      // Add shadow for better visibility
+      ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
+
+      ctx.fillText(num.value, num.x, num.y + yOffset);
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Start animation loop
+   */
+  private startAnimationLoop(): void {
+    const animate = (currentTime: number) => {
+      const deltaTime = currentTime - this.lastFrameTime;
+      this.lastFrameTime = currentTime;
+
+      if (deltaTime > 0 && deltaTime < 100) { // Sanity check
+        this.updateFloatingNumbers(deltaTime);
+      }
+
+      requestAnimationFrame(animate);
+    };
+
+    requestAnimationFrame(animate);
+  }
+
+  /**
+   * Override render to include floating numbers
+   */
+  private savedRender: ((state: GameState, selectedCard: number | null) => void) | null = null;
+
+  setRenderCallback(callback: () => void): void {
+    // Store the callback for continuous rendering
+    const continuousRender = () => {
+      callback();
+      requestAnimationFrame(continuousRender);
+    };
+    requestAnimationFrame(continuousRender);
   }
 }
