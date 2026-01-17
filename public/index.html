@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MURK - Victorian Orphanage Defense</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="game-container">
+    <!-- Header -->
+    <div id="header">
+      <div id="header-left">
+        <div id="turn-info">T<span id="turn-number">1</span></div>
+        <div id="phase-info"><span id="phase-name">RITUAL</span></div>
+        <div id="mana-info">
+          <span id="mana-current">1</span>/<span id="mana-max">1</span>
+        </div>
+      </div>
+
+      <div id="ritual-track">
+        <div class="ritual-bar player-bar">
+          <span class="ritual-label">PLR</span>
+          <div class="ritual-bar-container">
+            <div id="player-ritual-fill" class="ritual-fill"></div>
+          </div>
+          <span id="player-ritual-text" class="ritual-value">0</span>
+        </div>
+        <div class="ritual-bar cpu-bar">
+          <span class="ritual-label">CPU</span>
+          <div class="ritual-bar-container">
+            <div id="cpu-ritual-fill" class="ritual-fill"></div>
+          </div>
+          <span id="cpu-ritual-text" class="ritual-value">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Game Area -->
+    <div id="game-area">
+      <!-- Board Canvas -->
+      <canvas id="board-canvas" width="900" height="500"></canvas>
+
+      <!-- Lane Order Controls -->
+      <div id="lane-controls">
+        <div class="lane-control" data-lane="0">
+          <div class="lane-label">Lane 0</div>
+          <button class="lane-btn" data-order="advance">ADVANCE</button>
+          <button class="lane-btn" data-order="hold">HOLD</button>
+          <div class="lane-status">NONE</div>
+        </div>
+        <div class="lane-control" data-lane="1">
+          <div class="lane-label">Lane 1</div>
+          <button class="lane-btn" data-order="advance">ADVANCE</button>
+          <button class="lane-btn" data-order="hold">HOLD</button>
+          <div class="lane-status">NONE</div>
+        </div>
+        <div class="lane-control" data-lane="2">
+          <div class="lane-label">Lane 2</div>
+          <button class="lane-btn" data-order="advance">ADVANCE</button>
+          <button class="lane-btn" data-order="hold">HOLD</button>
+          <div class="lane-status">NONE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Hand -->
+    <div id="hand-area">
+      <div id="hand-title">YOUR HAND</div>
+      <div id="hand-cards"></div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div id="action-buttons">
+      <button id="advance-phase-btn" class="action-btn">ADVANCE PHASE</button>
+      <button id="end-turn-btn" class="action-btn">END TURN</button>
+    </div>
+
+    <!-- Event Log -->
+    <div id="event-log">
+      <div class="log-title">EVENT LOG</div>
+      <div id="log-content"></div>
+    </div>
+
+    <!-- Modal for game over -->
+    <div id="game-over-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2 id="winner-text"></h2>
+        <button id="restart-btn" class="action-btn">NEW GAME</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auto-reload script for development -->
+  <script>
+    // Simple auto-reload on server restart
+    let lastCheck = Date.now();
+    setInterval(() => {
+      fetch('/').then(() => {
+        // If server responds and enough time has passed, reload
+        const now = Date.now();
+        if (now - lastCheck > 3000) {
+          console.log('Server restarted, reloading page...');
+          location.reload();
+        }
+        lastCheck = now;
+      }).catch(() => {
+        // Server is down, will reconnect when back up
+      });
+    }, 1000);
+  </script>
+
+  <script type="module" src="./dist/client/main.js"></script>
+</body>
+</html>
