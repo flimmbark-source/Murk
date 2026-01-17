@@ -264,3 +264,16 @@ export function buildCpuDeck(): CardDefinition[] {
     ...Array(1).fill(CPU_ATTACKS[2]), // 1x Drowning Grasp
   ];
 }
+
+/**
+ * Get card definition by ID
+ */
+export function getCardById(cardId: string): CardDefinition | null {
+  const allCards = [
+    ...PLAYER_UNITS,
+    ...PLAYER_ATTACKS,
+    ...CPU_UNITS,
+    ...CPU_ATTACKS,
+  ];
+  return allCards.find((card) => card.id === cardId) || null;
+}

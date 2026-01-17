@@ -3,9 +3,10 @@
  */
 
 import { GameEngine } from "../engine/game-engine.js";
-import { buildPlayerDeck, buildCpuDeck } from "../cards/definitions.js";
+import { buildPlayerDeck, buildCpuDeck, getCardById } from "../cards/definitions.js";
 import { BoardRenderer } from "./renderer.js";
-import type { CardDefinition, LaneIndex } from "../types/core.js";
+import { getPiece } from "../models/board.js";
+import type { CardDefinition, LaneIndex, Piece } from "../types/core.js";
 
 class GameClient {
   private engine: GameEngine;
@@ -192,10 +193,10 @@ class GameClient {
   private updateLaneControls(state: any): void {
     const isMainPhase = state.phase === "main" && state.currentSide === "player";
 
-    document.querySelectorAll(".lane-control").forEach((control) => {
-      const laneIndex = parseInt(control.getAttribute("data-lane")!);
+    document.querySelectorAll(".lane-order-item").forEach((item) => {
+      const laneIndex = parseInt(item.getAttribute("data-lane")!);
       const laneState = state.lanes[laneIndex];
-      const statusEl = control.querySelector(".lane-status")!;
+      const statusEl = item.querySelector(".lane-order-status")!;
 
       statusEl.textContent = laneState.order.toUpperCase();
       if (laneState.order !== "none") {
@@ -205,7 +206,7 @@ class GameClient {
       }
 
       // Enable/disable buttons
-      control.querySelectorAll(".lane-btn").forEach((btn) => {
+      item.querySelectorAll(".lane-order-btn").forEach((btn) => {
         (btn as HTMLButtonElement).disabled = !isMainPhase;
       });
     });
@@ -272,11 +273,11 @@ class GameClient {
     canvas.addEventListener("click", (e) => this.handleBoardClick(e));
 
     // Lane order buttons
-    document.querySelectorAll(".lane-btn").forEach((btn) => {
+    document.querySelectorAll(".lane-order-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const target = e.target as HTMLElement;
-        const laneControl = target.closest(".lane-control")!;
-        const lane = parseInt(laneControl.getAttribute("data-lane")!) as LaneIndex;
+        const laneItem = target.closest(".lane-order-item")!;
+        const lane = parseInt(laneItem.getAttribute("data-lane")!) as LaneIndex;
         const order = target.getAttribute("data-order") as "advance" | "hold";
 
         this.engine.processAction({ type: "set_lane_order", lane, order });
@@ -300,6 +301,18 @@ class GameClient {
     document.getElementById("restart-btn")!.addEventListener("click", () => {
       location.reload();
     });
+
+    // Close card details popup when clicking outside
+    document.addEventListener("click", (e) => {
+      const popup = document.getElementById("card-details-popup");
+      const canvas = document.getElementById("board-canvas");
+
+      if (!popup!.classList.contains("hidden") &&
+          e.target !== canvas &&
+          !popup!.contains(e.target as Node)) {
+        this.hideCardDetailsPopup();
+      }
+    });
   }
 
   /**
@@ -315,12 +328,26 @@ class GameClient {
     const cell = this.renderer.getCellAtPosition(x, y);
     console.log("Board click:", { x, y, cell, selectedCard: this.selectedCard, phase: state.phase, side: state.currentSide });
 
+    if (!cell) {
+      console.log("No cell detected");
+      return;
+    }
+
+    // Check if there's a piece at this position
+    const piece = getPiece(state.board, { lane: cell.lane, depth: cell.depth });
+    if (piece) {
+      // Show card details popup
+      this.showCardDetailsPopup(piece);
+      return;
+    }
+
+    // Try to place card
     if (state.currentSide !== "player" || state.phase !== "main" || this.selectedCard === null) {
       console.log("Cannot place card - not player's main phase or no card selected");
       return;
     }
 
-    if (cell && cell.depth === 1) {
+    if (cell.depth === 1) {
       console.log("Attempting to place card at lane", cell.lane);
       // Try to play card
       const success = this.engine.processAction({
@@ -337,8 +364,35 @@ class GameClient {
 
       this.update();
     } else {
-      console.log("Click not at depth 1 or no cell detected");
+      console.log("Click not at depth 1");
     }
+  }
+
+  /**
+   * Show card details popup
+   */
+  private showCardDetailsPopup(piece: Piece): void {
+    const card = getCardById(piece.cardId);
+    if (!card) return;
+
+    const popup = document.getElementById("card-details-popup")!;
+    document.getElementById("popup-cost")!.textContent = String(card.manaCost);
+    document.getElementById("popup-name")!.textContent = card.name;
+    document.getElementById("popup-type")!.textContent = card.type.toUpperCase();
+    document.getElementById("popup-attack")!.textContent = String(piece.attack);
+    document.getElementById("popup-health")!.textContent = `${piece.health}/${piece.maxHealth}`;
+    document.getElementById("popup-description")!.textContent = card.description || "";
+    document.getElementById("popup-position")!.textContent = `Lane ${piece.position.lane}, Depth ${piece.position.depth} (${piece.side})`;
+
+    popup.classList.remove("hidden");
+  }
+
+  /**
+   * Hide card details popup
+   */
+  private hideCardDetailsPopup(): void {
+    const popup = document.getElementById("card-details-popup")!;
+    popup.classList.add("hidden");
   }
 }
 

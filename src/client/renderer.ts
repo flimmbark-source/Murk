@@ -101,21 +101,28 @@ export class BoardRenderer {
     const topY = this.getDepthBoundaryY(1);
     const bottomY = this.getDepthBoundaryY(0);
 
-    // Draw solid yellow outline for each lane segment at depth 1
-    ctx.strokeStyle = "#FFD700"; // Gold/yellow color
-    ctx.lineWidth = 3;
-
+    // Draw yellow glow centered on each lane segment at depth 1
     for (let lane = 0; lane < 3; lane++) {
       // Use exact same boundary X calculations as the grid
       const leftX = this.getLaneBoundaryX(lane, 1);
       const rightX = this.getLaneBoundaryX(lane + 1, 1);
 
-      ctx.strokeRect(
-        leftX,
-        topY,
-        rightX - leftX,
-        bottomY - topY
+      const centerX = (leftX + rightX) / 2;
+      const centerY = (topY + bottomY) / 2;
+      const width = rightX - leftX;
+      const height = bottomY - topY;
+
+      // Create radial gradient for glow effect
+      const gradient = ctx.createRadialGradient(
+        centerX, centerY, 0,
+        centerX, centerY, Math.max(width, height) / 2
       );
+      gradient.addColorStop(0, "rgba(255, 215, 0, 0.6)");
+      gradient.addColorStop(0.5, "rgba(255, 215, 0, 0.3)");
+      gradient.addColorStop(1, "rgba(255, 215, 0, 0)");
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(leftX, topY, width, height);
     }
   }
 
