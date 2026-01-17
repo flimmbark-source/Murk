@@ -62,6 +62,9 @@ export class BoardRenderer {
   render(state: GameState, selectedCard: number | null = null): void {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+    // Draw current phase at top center
+    this.drawPhaseIndicator(state.phase);
+
     // Draw perspective grid
     this.drawPerspectiveGrid();
 
@@ -77,30 +80,45 @@ export class BoardRenderer {
   }
 
   /**
+   * Draw phase indicator at top center
+   */
+  private drawPhaseIndicator(phase: string): void {
+    const ctx = this.ctx;
+    ctx.font = "12px 'Courier New'";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#c96969";
+    ctx.fillText(`PHASE: ${phase.toUpperCase()}`, this.canvas.width / 2, 10);
+  }
+
+  /**
    * Draw placement highlights for depth 1 when card is selected
    */
   private drawPlacementHighlights(): void {
     const ctx = this.ctx;
     const depth = 1 as Depth;
     const scale = this.getDepthScale(depth);
-    const cardWidth = 75 * scale;
-    const cardHeight = 60 * scale;
     const y = this.getDepthY(depth);
 
-    // Draw yellow outline for each lane at depth 1
-    for (let lane = 0; lane < 3; lane++) {
-      const x = this.getLaneX(lane as LaneIndex, depth);
+    // Calculate cell boundaries to match grid lines exactly
+    const leftX = this.getLaneX(0, depth) - (LANE_WIDTH_BASE * scale) / 2;
+    const rightX = this.getLaneX(2, depth) + (LANE_WIDTH_BASE * scale) / 2;
+    const cellWidth = (rightX - leftX) / 3;
+    const cardHeight = 60 * scale;
 
-      ctx.strokeStyle = "#FFD700"; // Gold/yellow color
-      ctx.lineWidth = 3;
-      ctx.setLineDash([5, 5]); // Dashed line
+    // Draw solid yellow outline for each lane segment at depth 1
+    ctx.strokeStyle = "#FFD700"; // Gold/yellow color
+    ctx.lineWidth = 3;
+
+    for (let lane = 0; lane < 3; lane++) {
+      const cellX = leftX + lane * cellWidth;
+
       ctx.strokeRect(
-        x - cardWidth / 2,
+        cellX,
         y - cardHeight / 2,
-        cardWidth,
+        cellWidth,
         cardHeight
       );
-      ctx.setLineDash([]); // Reset to solid line
     }
   }
 

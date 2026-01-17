@@ -61,14 +61,25 @@ class GameClient {
     // Check for game over
     if (state.winner) {
       this.showGameOver(state.winner);
+      return;
     }
 
     // Auto-advance CPU turns
-    if (state.currentSide === "cpu" && !state.winner) {
+    if (state.currentSide === "cpu") {
       setTimeout(() => {
         this.engine.processAction({ type: "advance_phase" });
         this.update();
       }, 1000);
+      return;
+    }
+
+    // Auto-advance non-main phases for player
+    if (state.currentSide === "player" && state.phase !== "main") {
+      const delay = state.phase === "ritual" ? 1500 : 2000;
+      setTimeout(() => {
+        this.engine.processAction({ type: "advance_phase" });
+        this.update();
+      }, delay);
     }
   }
 
@@ -153,11 +164,16 @@ class GameClient {
    * Select a card from hand
    */
   private selectCard(index: number): void {
+    console.log("selectCard called with index:", index);
+    console.log("Current selectedCard:", this.selectedCard);
     if (this.selectedCard === index) {
       this.selectedCard = null;
+      console.log("Deselected card", index);
     } else {
       this.selectedCard = index;
+      console.log("Selected card", index);
     }
+    console.log("New selectedCard value:", this.selectedCard);
     this.update();
   }
 

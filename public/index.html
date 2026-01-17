@@ -91,6 +91,25 @@
     </div>
   </div>
 
+  <!-- Auto-reload script for development -->
+  <script>
+    // Simple auto-reload on server restart
+    let lastCheck = Date.now();
+    setInterval(() => {
+      fetch('/').then(() => {
+        // If server responds and enough time has passed, reload
+        const now = Date.now();
+        if (now - lastCheck > 3000) {
+          console.log('Server restarted, reloading page...');
+          location.reload();
+        }
+        lastCheck = now;
+      }).catch(() => {
+        // Server is down, will reconnect when back up
+      });
+    }, 1000);
+  </script>
+
   <script type="module" src="./dist/client/main.js"></script>
 </body>
 </html>
