@@ -3,14 +3,16 @@
  */
 
 import { GameEngine } from "../engine/game-engine.js";
-import { buildPlayerDeck, buildCpuDeck } from "../cards/definitions.js";
+import { buildPlayerDeck, buildCpuDeck, getCardById } from "../cards/definitions.js";
 import { BoardRenderer } from "./renderer.js";
-import type { CardDefinition, LaneIndex } from "../types/core.js";
+import { getPiece } from "../models/board.js";
+import type { CardDefinition, LaneIndex, Piece } from "../types/core.js";
 
 class GameClient {
   private engine: GameEngine;
   private renderer: BoardRenderer;
   private selectedCard: number | null = null;
+  private autoAdvanceTimeout: number | null = null;
 
   constructor() {
     const playerDeck = buildPlayerDeck();
@@ -64,9 +66,16 @@ class GameClient {
       return;
     }
 
+    // Clear any pending auto-advance timeout
+    if (this.autoAdvanceTimeout !== null) {
+      clearTimeout(this.autoAdvanceTimeout);
+      this.autoAdvanceTimeout = null;
+    }
+
     // Auto-advance CPU turns
     if (state.currentSide === "cpu") {
-      setTimeout(() => {
+      this.autoAdvanceTimeout = window.setTimeout(() => {
+        this.autoAdvanceTimeout = null;
         this.engine.processAction({ type: "advance_phase" });
         this.update();
       }, 1000);
@@ -76,7 +85,8 @@ class GameClient {
     // Auto-advance non-main phases for player
     if (state.currentSide === "player" && state.phase !== "main") {
       const delay = state.phase === "ritual" ? 1500 : 2000;
-      setTimeout(() => {
+      this.autoAdvanceTimeout = window.setTimeout(() => {
+        this.autoAdvanceTimeout = null;
         this.engine.processAction({ type: "advance_phase" });
         this.update();
       }, delay);
@@ -178,28 +188,60 @@ class GameClient {
   }
 
   /**
+   * Set lane order for first available lane
+   */
+  private setLaneOrder(order: "advance" | "hold"): void {
+    const state = this.engine.getState();
+
+    // Find first lane with player pieces, or default to lane 0
+    let targetLane: LaneIndex = 0;
+
+    for (let lane = 0; lane < 3; lane++) {
+      const laneIndex = lane as LaneIndex;
+      const hasPlayerPieces = Object.values(state.board).some((piece: any) =>
+        piece && piece.position.lane === laneIndex && piece.side === "player"
+      );
+
+      if (hasPlayerPieces) {
+        targetLane = laneIndex;
+        break;
+      }
+    }
+
+    this.engine.processAction({ type: "set_lane_order", lane: targetLane, order });
+    this.update();
+  }
+
+  /**
    * Update lane controls
    */
   private updateLaneControls(state: any): void {
     const isMainPhase = state.phase === "main" && state.currentSide === "player";
 
-    document.querySelectorAll(".lane-control").forEach((control) => {
-      const laneIndex = parseInt(control.getAttribute("data-lane")!);
-      const laneState = state.lanes[laneIndex];
-      const statusEl = control.querySelector(".lane-status")!;
+    // Check if any lane has an order set
+    const activeLane = state.lanes.find((lane: any) => lane.order !== "none");
+    const statusEl = document.getElementById("lane-order-status")!;
 
-      statusEl.textContent = laneState.order.toUpperCase();
-      if (laneState.order !== "none") {
-        statusEl.classList.add("active");
-      } else {
-        statusEl.classList.remove("active");
-      }
+    if (activeLane) {
+      statusEl.textContent = activeLane.order.toUpperCase();
+      statusEl.classList.add("active");
+    } else {
+      statusEl.textContent = "NONE";
+      statusEl.classList.remove("active");
+    }
 
-      // Enable/disable buttons
-      control.querySelectorAll(".lane-btn").forEach((btn) => {
-        (btn as HTMLButtonElement).disabled = !isMainPhase;
-      });
-    });
+    // Enable/disable buttons
+    const hasOrder = activeLane !== undefined;
+    document.getElementById("advance-all-btn")!.setAttribute("disabled", (!isMainPhase || hasOrder).toString());
+    document.getElementById("hold-all-btn")!.setAttribute("disabled", (!isMainPhase || hasOrder).toString());
+
+    if (!isMainPhase || hasOrder) {
+      (document.getElementById("advance-all-btn") as HTMLButtonElement).disabled = true;
+      (document.getElementById("hold-all-btn") as HTMLButtonElement).disabled = true;
+    } else {
+      (document.getElementById("advance-all-btn") as HTMLButtonElement).disabled = false;
+      (document.getElementById("hold-all-btn") as HTMLButtonElement).disabled = false;
+    }
   }
 
   /**
@@ -235,11 +277,62 @@ class GameClient {
 
       entry.textContent = `• ${event.message}`;
       logContent.insertBefore(entry, logContent.firstChild);
+
+      // Create floating numbers for relevant events
+      this.processEventForAnimations(event);
     });
 
     // Keep log size manageable
     while (logContent.children.length > 50) {
       logContent.removeChild(logContent.lastChild!);
+    }
+  }
+
+  /**
+   * Process event and create floating number animations
+   */
+  private processEventForAnimations(event: any): void {
+    if (!event.data) return;
+
+    // Combat damage
+    if (event.type === "combat" && event.data.damage !== undefined) {
+      const piece = event.data.target || event.data.attacker;
+      if (piece && piece.position) {
+        this.renderer.addFloatingNumber(
+          `-${event.data.damage}`,
+          piece.position.lane,
+          piece.position.depth,
+          "#ff4444"
+        );
+      }
+    }
+
+    // Ritual gains
+    if (event.type === "ritual_phase" || event.message.includes("ritual")) {
+      const state = this.engine.getState();
+      // Show ritual gains for pieces
+      Object.values(state.board).forEach((piece: any) => {
+        if (piece && piece.type === "unit") {
+          const ritualGain = 1; // Units contribute 1 ritual
+          this.renderer.addFloatingNumber(
+            `+${ritualGain} ⚗`,
+            piece.position.lane,
+            piece.position.depth,
+            "#9b59d6"
+          );
+        }
+      });
+    }
+
+    // Breakthrough damage
+    if (event.type === "breakthrough" && event.data.damage !== undefined) {
+      // Show at the far edge of the lane
+      this.renderer.addFloatingNumber(
+        `-${event.data.damage}`,
+        event.data.lane,
+        event.data.side === "player" ? 6 : 1,
+        "#ff6644"
+      );
     }
   }
 
@@ -262,17 +355,13 @@ class GameClient {
     const canvas = document.getElementById("board-canvas") as HTMLCanvasElement;
     canvas.addEventListener("click", (e) => this.handleBoardClick(e));
 
-    // Lane order buttons
-    document.querySelectorAll(".lane-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        const target = e.target as HTMLElement;
-        const laneControl = target.closest(".lane-control")!;
-        const lane = parseInt(laneControl.getAttribute("data-lane")!) as LaneIndex;
-        const order = target.getAttribute("data-order") as "advance" | "hold";
+    // Lane order buttons - Apply to first available lane
+    document.getElementById("advance-all-btn")!.addEventListener("click", () => {
+      this.setLaneOrder("advance");
+    });
 
-        this.engine.processAction({ type: "set_lane_order", lane, order });
-        this.update();
-      });
+    document.getElementById("hold-all-btn")!.addEventListener("click", () => {
+      this.setLaneOrder("hold");
     });
 
     // Action buttons
@@ -291,6 +380,18 @@ class GameClient {
     document.getElementById("restart-btn")!.addEventListener("click", () => {
       location.reload();
     });
+
+    // Close card details popup when clicking outside
+    document.addEventListener("click", (e) => {
+      const popup = document.getElementById("card-details-popup");
+      const canvas = document.getElementById("board-canvas");
+
+      if (!popup!.classList.contains("hidden") &&
+          e.target !== canvas &&
+          !popup!.contains(e.target as Node)) {
+        this.hideCardDetailsPopup();
+      }
+    });
   }
 
   /**
@@ -306,12 +407,31 @@ class GameClient {
     const cell = this.renderer.getCellAtPosition(x, y);
     console.log("Board click:", { x, y, cell, selectedCard: this.selectedCard, phase: state.phase, side: state.currentSide });
 
+    if (!cell) {
+      console.log("No cell detected");
+      this.hideCardDetailsPopup();
+      return;
+    }
+
+    // Check if there's a piece at this position
+    const piece = getPiece(state.board, { lane: cell.lane, depth: cell.depth });
+    if (piece) {
+      // Show card details popup
+      this.showCardDetailsPopup(piece);
+      e.stopPropagation(); // Prevent document click handler from closing it
+      return;
+    }
+
+    // Close popup if clicking empty cell
+    this.hideCardDetailsPopup();
+
+    // Try to place card
     if (state.currentSide !== "player" || state.phase !== "main" || this.selectedCard === null) {
       console.log("Cannot place card - not player's main phase or no card selected");
       return;
     }
 
-    if (cell && cell.depth === 1) {
+    if (cell.depth === 1) {
       console.log("Attempting to place card at lane", cell.lane);
       // Try to play card
       const success = this.engine.processAction({
@@ -328,8 +448,35 @@ class GameClient {
 
       this.update();
     } else {
-      console.log("Click not at depth 1 or no cell detected");
+      console.log("Click not at depth 1");
     }
+  }
+
+  /**
+   * Show card details popup
+   */
+  private showCardDetailsPopup(piece: Piece): void {
+    const card = getCardById(piece.cardId);
+    if (!card) return;
+
+    const popup = document.getElementById("card-details-popup")!;
+    document.getElementById("popup-cost")!.textContent = String(card.manaCost);
+    document.getElementById("popup-name")!.textContent = card.name;
+    document.getElementById("popup-type")!.textContent = card.type.toUpperCase();
+    document.getElementById("popup-attack")!.textContent = String(piece.attack);
+    document.getElementById("popup-health")!.textContent = `${piece.health}/${piece.maxHealth}`;
+    document.getElementById("popup-description")!.textContent = card.description || "";
+    document.getElementById("popup-position")!.textContent = `Lane ${piece.position.lane}, Depth ${piece.position.depth} (${piece.side})`;
+
+    popup.classList.remove("hidden");
+  }
+
+  /**
+   * Hide card details popup
+   */
+  private hideCardDetailsPopup(): void {
+    const popup = document.getElementById("card-details-popup")!;
+    popup.classList.add("hidden");
   }
 }
 

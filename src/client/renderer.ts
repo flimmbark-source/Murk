@@ -12,13 +12,25 @@ const PERSPECTIVE_SCALE_MAX = 1.0; // Scale at depth 1 (player edge)
 const DEPTH_SPACING_BASE = 80;
 const DEPTH_SPACING_MIN = 30;
 
+interface FloatingNumber {
+  value: string;
+  x: number;
+  y: number;
+  lifetime: number;
+  maxLifetime: number;
+  color: string;
+}
+
 export class BoardRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+  private floatingNumbers: FloatingNumber[] = [];
+  private lastFrameTime: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+    this.startAnimationLoop();
   }
 
   /**
@@ -77,6 +89,9 @@ export class BoardRenderer {
     for (let depth = 6; depth >= 1; depth--) {
       this.drawDepthRow(state, depth as Depth);
     }
+
+    // Draw floating numbers on top of everything
+    this.renderFloatingNumbers();
   }
 
   /**
@@ -96,30 +111,69 @@ export class BoardRenderer {
    */
   private drawPlacementHighlights(): void {
     const ctx = this.ctx;
-    const depth = 1 as Depth;
-    const scale = this.getDepthScale(depth);
-    const y = this.getDepthY(depth);
 
-    // Calculate cell boundaries to match grid lines exactly
-    const leftX = this.getLaneX(0, depth) - (LANE_WIDTH_BASE * scale) / 2;
-    const rightX = this.getLaneX(2, depth) + (LANE_WIDTH_BASE * scale) / 2;
-    const cellWidth = (rightX - leftX) / 3;
-    const cardHeight = 60 * scale;
+    // Use EXACT same boundary calculations as the grid
+    const topY = this.getDepthBoundaryY(1);
+    const bottomY = this.getDepthBoundaryY(0);
 
-    // Draw solid yellow outline for each lane segment at depth 1
-    ctx.strokeStyle = "#FFD700"; // Gold/yellow color
-    ctx.lineWidth = 3;
-
+    // Draw yellow glow centered on each lane segment at depth 1
     for (let lane = 0; lane < 3; lane++) {
-      const cellX = leftX + lane * cellWidth;
+      // Use exact same boundary X calculations as the grid
+      const leftX = this.getLaneBoundaryX(lane, 1);
+      const rightX = this.getLaneBoundaryX(lane + 1, 1);
 
-      ctx.strokeRect(
-        cellX,
-        y - cardHeight / 2,
-        cellWidth,
-        cardHeight
+      const centerX = (leftX + rightX) / 2;
+      const centerY = (topY + bottomY) / 2;
+      const width = rightX - leftX;
+      const height = bottomY - topY;
+
+      // Create radial gradient for glow effect
+      const gradient = ctx.createRadialGradient(
+        centerX, centerY, 0,
+        centerX, centerY, Math.max(width, height) / 2
       );
+      gradient.addColorStop(0, "rgba(255, 215, 0, 0.6)");
+      gradient.addColorStop(0.5, "rgba(255, 215, 0, 0.3)");
+      gradient.addColorStop(1, "rgba(255, 215, 0, 0)");
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(leftX, topY, width, height);
     }
+  }
+
+  /**
+   * Get Y position for boundary between two depths
+   */
+  private getDepthBoundaryY(depth: number): number {
+    if (depth === 0) {
+      // Bottom edge - extend below depth 1
+      const y1 = this.getDepthY(1);
+      const y2 = this.getDepthY(2);
+      return y1 + (y1 - y2) / 2;
+    } else if (depth === 6) {
+      // Top edge - extend above depth 6
+      const y6 = this.getDepthY(6);
+      const y5 = this.getDepthY(5);
+      return y6 - (y5 - y6) / 2;
+    } else {
+      // Midpoint between adjacent depths
+      const y1 = this.getDepthY(depth as Depth);
+      const y2 = this.getDepthY((depth + 1) as Depth);
+      return (y1 + y2) / 2;
+    }
+  }
+
+  /**
+   * Get X position for a vertical lane boundary at a given depth
+   * @param boundaryIndex 0-3 for the 4 vertical boundaries (0=left edge, 3=right edge)
+   * @param depth The depth at which to calculate the X position
+   */
+  private getLaneBoundaryX(boundaryIndex: number, depth: number): number {
+    const scale = depth === 0 || depth === 6
+      ? this.getDepthScale(depth === 0 ? 1 : 6)
+      : (this.getDepthScale(depth as Depth) + this.getDepthScale((depth + 1) as Depth)) / 2;
+    const centerX = this.canvas.width / 2;
+    return centerX + (boundaryIndex - 1.5) * LANE_WIDTH_BASE * scale;
   }
 
   /**
@@ -130,20 +184,24 @@ export class BoardRenderer {
     ctx.strokeStyle = "#3a2817";
     ctx.lineWidth = 2;
 
-    // Draw horizontal depth lines
-    for (let depth = 6; depth >= 1; depth--) {
-      const y = this.getDepthY(depth as Depth);
-      const scale = this.getDepthScale(depth as Depth);
-
-      const leftX = this.getLaneX(0, depth as Depth) - (LANE_WIDTH_BASE * scale) / 2;
-      const rightX = this.getLaneX(2, depth as Depth) + (LANE_WIDTH_BASE * scale) / 2;
+    // Draw horizontal boundary lines that define cells
+    for (let depth = 6; depth >= 0; depth--) {
+      const y = this.getDepthBoundaryY(depth);
+      const leftX = this.getLaneBoundaryX(0, depth);
+      const rightX = this.getLaneBoundaryX(3, depth);
 
       ctx.beginPath();
       ctx.moveTo(leftX, y);
       ctx.lineTo(rightX, y);
       ctx.stroke();
+    }
 
-      // Draw depth label
+    // Draw depth labels at center of each cell
+    for (let depth = 6; depth >= 1; depth--) {
+      const y = this.getDepthY(depth as Depth);
+      const scale = this.getDepthScale(depth as Depth);
+      const leftX = this.canvas.width / 2 - (1.5 * LANE_WIDTH_BASE * scale);
+
       ctx.font = `bold ${9 + scale * 3}px 'Courier New'`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -152,29 +210,14 @@ export class BoardRenderer {
       ctx.fillText(label, leftX - 30, y);
     }
 
-    // Draw vertical lane dividers
-    for (let lane = 0; lane < 3; lane++) {
+    // Draw vertical lane boundaries (4 lines defining 3 lanes)
+    // Connect from top boundary (depth 6) to bottom boundary (depth 0)
+    for (let i = 0; i <= 3; i++) {
       ctx.beginPath();
-      const x1 = this.getLaneX(lane as LaneIndex, 6);
-      const y1 = this.getDepthY(6);
-      const x2 = this.getLaneX(lane as LaneIndex, 1);
-      const y2 = this.getDepthY(1);
-
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-    }
-
-    // Draw lane right borders
-    for (let lane = 0; lane < 3; lane++) {
-      const scale1 = this.getDepthScale(6);
-      const scale2 = this.getDepthScale(1);
-
-      ctx.beginPath();
-      const x1 = this.getLaneX(lane as LaneIndex, 6) + (LANE_WIDTH_BASE * scale1) / 2;
-      const y1 = this.getDepthY(6);
-      const x2 = this.getLaneX(lane as LaneIndex, 1) + (LANE_WIDTH_BASE * scale2) / 2;
-      const y2 = this.getDepthY(1);
+      const x1 = this.getLaneBoundaryX(i, 6);
+      const y1 = this.getDepthBoundaryY(6);
+      const x2 = this.getLaneBoundaryX(i, 0);
+      const y2 = this.getDepthBoundaryY(0);
 
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
@@ -306,29 +349,114 @@ export class BoardRenderer {
   getCellAtPosition(x: number, y: number): { lane: LaneIndex; depth: Depth } | null {
     // Check each depth from front to back
     for (let depth = 1; depth <= 6; depth++) {
-      const depthY = this.getDepthY(depth as Depth);
-      const scale = this.getDepthScale(depth as Depth);
-      const cardHeight = 60 * scale;
-
-      // Make hit area slightly larger for easier clicking (especially at depth 1)
-      const hitPadding = depth === 1 ? 15 : 5;
+      // Use actual boundary Y positions to define cell area
+      const topY = this.getDepthBoundaryY(depth);
+      const bottomY = this.getDepthBoundaryY(depth - 1);
 
       // Check if Y is in range
-      if (Math.abs(y - depthY) > cardHeight / 2 + hitPadding) {
+      if (y < topY || y > bottomY) {
         continue;
       }
 
-      // Check each lane
+      // Check each lane using exact same boundary X calculations as the grid
       for (let lane = 0; lane < 3; lane++) {
-        const laneX = this.getLaneX(lane as LaneIndex, depth as Depth);
-        const cardWidth = 75 * scale;
+        const leftX = this.getLaneBoundaryX(lane, depth);
+        const rightX = this.getLaneBoundaryX(lane + 1, depth);
 
-        if (Math.abs(x - laneX) <= cardWidth / 2 + hitPadding) {
+        if (x >= leftX && x <= rightX) {
           return { lane: lane as LaneIndex, depth: depth as Depth };
         }
       }
     }
 
     return null;
+  }
+
+  /**
+   * Add a floating number animation
+   */
+  addFloatingNumber(value: string, lane: LaneIndex, depth: Depth, color: string): void {
+    const x = this.getLaneX(lane, depth);
+    const y = this.getDepthY(depth);
+
+    this.floatingNumbers.push({
+      value,
+      x,
+      y,
+      lifetime: 0,
+      maxLifetime: 2000, // 2 seconds
+      color,
+    });
+  }
+
+  /**
+   * Update floating numbers
+   */
+  private updateFloatingNumbers(deltaTime: number): void {
+    this.floatingNumbers = this.floatingNumbers.filter((num) => {
+      num.lifetime += deltaTime;
+      return num.lifetime < num.maxLifetime;
+    });
+  }
+
+  /**
+   * Render floating numbers
+   */
+  private renderFloatingNumbers(): void {
+    const ctx = this.ctx;
+
+    for (const num of this.floatingNumbers) {
+      const progress = num.lifetime / num.maxLifetime;
+      const yOffset = -progress * 60; // Rise 60 pixels
+      const opacity = 1 - progress; // Fade out
+
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.font = "bold 20px 'Courier New'";
+      ctx.fillStyle = num.color;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      // Add shadow for better visibility
+      ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
+
+      ctx.fillText(num.value, num.x, num.y + yOffset);
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Start animation loop
+   */
+  private startAnimationLoop(): void {
+    const animate = (currentTime: number) => {
+      const deltaTime = currentTime - this.lastFrameTime;
+      this.lastFrameTime = currentTime;
+
+      if (deltaTime > 0 && deltaTime < 100) { // Sanity check
+        this.updateFloatingNumbers(deltaTime);
+      }
+
+      requestAnimationFrame(animate);
+    };
+
+    requestAnimationFrame(animate);
+  }
+
+  /**
+   * Override render to include floating numbers
+   */
+  private savedRender: ((state: GameState, selectedCard: number | null) => void) | null = null;
+
+  setRenderCallback(callback: () => void): void {
+    // Store the callback for continuous rendering
+    const continuousRender = () => {
+      callback();
+      requestAnimationFrame(continuousRender);
+    };
+    requestAnimationFrame(continuousRender);
   }
 }

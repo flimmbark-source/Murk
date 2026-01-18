@@ -40,34 +40,22 @@
     <div id="game-area">
       <!-- Board Canvas -->
       <canvas id="board-canvas" width="900" height="500"></canvas>
-
-      <!-- Lane Order Controls -->
-      <div id="lane-controls">
-        <div class="lane-control" data-lane="0">
-          <div class="lane-label">Lane 0</div>
-          <button class="lane-btn" data-order="advance">ADVANCE</button>
-          <button class="lane-btn" data-order="hold">HOLD</button>
-          <div class="lane-status">NONE</div>
-        </div>
-        <div class="lane-control" data-lane="1">
-          <div class="lane-label">Lane 1</div>
-          <button class="lane-btn" data-order="advance">ADVANCE</button>
-          <button class="lane-btn" data-order="hold">HOLD</button>
-          <div class="lane-status">NONE</div>
-        </div>
-        <div class="lane-control" data-lane="2">
-          <div class="lane-label">Lane 2</div>
-          <button class="lane-btn" data-order="advance">ADVANCE</button>
-          <button class="lane-btn" data-order="hold">HOLD</button>
-          <div class="lane-status">NONE</div>
-        </div>
-      </div>
     </div>
 
     <!-- Player Hand -->
     <div id="hand-area">
       <div id="hand-title">YOUR HAND</div>
       <div id="hand-cards"></div>
+    </div>
+
+    <!-- Lane Order Controls -->
+    <div id="lane-order-controls">
+      <div class="lane-order-title">ALL LANES</div>
+      <div class="lane-order-buttons">
+        <button id="advance-all-btn" class="lane-order-btn">ADVANCE</button>
+        <button id="hold-all-btn" class="lane-order-btn">HOLD</button>
+      </div>
+      <div id="lane-order-status">NONE</div>
     </div>
 
     <!-- Action Buttons -->
@@ -80,6 +68,23 @@
     <div id="event-log">
       <div class="log-title">EVENT LOG</div>
       <div id="log-content"></div>
+    </div>
+
+    <!-- Card Details Pop-up -->
+    <div id="card-details-popup" class="hidden">
+      <div class="card-details-content">
+        <div class="card-details-header">
+          <div class="card-details-cost" id="popup-cost"></div>
+          <div class="card-details-name" id="popup-name"></div>
+        </div>
+        <div class="card-details-type" id="popup-type"></div>
+        <div class="card-details-stats">
+          <div class="card-stat stat-attack">⚔ <span id="popup-attack"></span></div>
+          <div class="card-stat stat-health">❤ <span id="popup-health"></span></div>
+        </div>
+        <div class="card-details-description" id="popup-description"></div>
+        <div class="card-details-position" id="popup-position"></div>
+      </div>
     </div>
 
     <!-- Modal for game over -->

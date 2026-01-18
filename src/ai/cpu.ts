@@ -38,9 +38,12 @@ export function decideCpuMainPhase(state: GameState): CpuDecision {
       return a.card.manaCost - b.card.manaCost; // Cheaper first
     });
 
+  // Track available mana for planning (don't modify actual state)
+  let availableMana = cpu.mana;
+
   // Play cards while we have mana
   for (const { card, index } of sortedHand) {
-    if (!canAfford(cpu, card.manaCost)) {
+    if (card.manaCost > availableMana) {
       continue;
     }
 
@@ -49,7 +52,7 @@ export function decideCpuMainPhase(state: GameState): CpuDecision {
 
     if (lane !== null) {
       cardsToPlay.push({ cardIndex: index, lane });
-      cpu.mana -= card.manaCost; // Simulate spending for planning
+      availableMana -= card.manaCost; // Track spending for planning only
     }
   }
 
